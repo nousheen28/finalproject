@@ -17,6 +17,9 @@ export type Schema = {
     placeType: string;
     accessibilityFeatures?: string | null;
     photos?: string | null;
+    website?: string | null;
+    phone?: string | null;
+    rating?: number | null;
     createdAt?: string;
     updatedAt?: string;
   };

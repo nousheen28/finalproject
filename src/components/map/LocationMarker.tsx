@@ -20,8 +20,8 @@ export const LocationMarker: React.FC<LocationMarkerProps> = ({ map, position })
           <div class="absolute w-12 h-12 bg-blue-500 opacity-20 rounded-full -left-4 -top-4"></div>
         </div>
       `,
-      iconSize: [12, 12],
-      iconAnchor: [6, 6]
+      iconSize: [12, 12] as L.PointExpression,
+      iconAnchor: [6, 6] as L.PointExpression
     });
 
     // Create marker if it doesn't exist

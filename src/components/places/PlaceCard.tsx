@@ -7,6 +7,7 @@ import { Bookmark, MapPin, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAppContext } from '@/lib/context';
 import type { PlaceDetails } from '@/lib/api';
+import { useToast } from '@/hooks/use-toast';
 
 interface PlaceCardProps {
   place: PlaceDetails;
@@ -21,6 +22,7 @@ export const PlaceCard: React.FC<PlaceCardProps> = ({
 }) => {
   const navigate = useNavigate();
   const { savedPlaces, addSavedPlace, setDestination, startNavigation } = useAppContext();
+  const { toast } = useToast();
   
   const isSaved = savedPlaces.some(p => 
     p.id === place.id || 
@@ -28,6 +30,14 @@ export const PlaceCard: React.FC<PlaceCardProps> = ({
   );
 
   const handleSavePlace = () => {
+    if (isSaved) {
+      toast({
+        title: "Already saved",
+        description: "This place is already in your saved places"
+      });
+      return;
+    }
+    
     addSavedPlace({
       name: place.name,
       address: place.address,
@@ -37,6 +47,11 @@ export const PlaceCard: React.FC<PlaceCardProps> = ({
       accessibilityFeatures: JSON.stringify(place.accessibilityFeatures),
       osmId: place.osmId,
       photos: place.photos ? JSON.stringify(place.photos) : undefined
+    });
+    
+    toast({
+      title: "Place saved",
+      description: `${place.name} has been added to your saved places`
     });
   };
 

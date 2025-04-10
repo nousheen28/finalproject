@@ -96,8 +96,8 @@ export const MapView: React.FC<MapViewProps> = ({
               </svg>
             </div>
           `,
-          iconSize: [24, 24],
-          iconAnchor: [12, 24]
+          iconSize: [24, 24] as L.PointExpression,
+          iconAnchor: [12, 24] as L.PointExpression
         })
       }).addTo(map);
       
@@ -167,6 +167,7 @@ export const MapView: React.FC<MapViewProps> = ({
         });
         
         setNearbyPlaces(filteredPlaces);
+        console.log("Nearby places loaded:", filteredPlaces.length);
       } catch (error) {
         console.error("Error fetching nearby places:", error);
       } finally {

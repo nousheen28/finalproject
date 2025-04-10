@@ -73,9 +73,13 @@ const ProfilePage = () => {
       if (session?.user) {
         setIsLoadingSavedPlaces(true);
         try {
-          // Saved places are already loaded in the context
-          // This is just to show loading state
-          await new Promise(resolve => setTimeout(resolve, 500));
+          // Fetch saved places from database
+          const savedPlacesData = await fine.table("savedPlaces").select().eq("userId", Number(session.user.id));
+          if (savedPlacesData && savedPlacesData.length > 0) {
+            const placeIds = savedPlacesData.map(sp => sp.placeId);
+            const places = await fine.table("places").select().in("id", placeIds);
+            console.log("Loaded saved places:", places);
+          }
         } catch (error) {
           console.error("Error loading saved places:", error);
         } finally {
@@ -359,6 +363,29 @@ const ProfilePage = () => {
   // Determine if we should use large text based on preferences
   const largeText = accessibilityPreferences.uiPreferences.largeText;
   const highContrast = accessibilityPreferences.uiPreferences.highContrast;
+
+  // Convert saved places to PlaceDetails format for PlaceCard
+  const savedPlacesFormatted = savedPlaces.map(place => {
+    // Parse JSON strings if needed
+    const accessibilityFeatures = typeof place.accessibilityFeatures === 'string' 
+      ? JSON.parse(place.accessibilityFeatures) 
+      : place.accessibilityFeatures || [];
+    
+    const photos = typeof place.photos === 'string'
+      ? JSON.parse(place.photos)
+      : place.photos || [];
+    
+    return {
+      id: place.id!,
+      name: place.name,
+      address: place.address || '',
+      coordinates: [place.latitude, place.longitude] as [number, number],
+      placeType: place.placeType,
+      accessibilityFeatures: accessibilityFeatures,
+      photos: photos,
+      osmId: place.osmId
+    };
+  });
 
   if (isSessionLoading) {
     return (
@@ -824,28 +851,19 @@ const ProfilePage = () => {
                   </div>
                 ))}
               </div>
-            ) : savedPlaces.length > 0 ? (
+            ) : savedPlacesFormatted.length > 0 ? (
               <div className="space-y-4">
-                {savedPlaces.map((place) => (
+                {savedPlacesFormatted.map((place) => (
                   <div key={place.id} className="relative">
                     <PlaceCard 
-                      place={{
-                        id: place.id!,
-                        name: place.name,
-                        address: place.address || '',
-                        coordinates: [place.latitude, place.longitude],
-                        placeType: place.placeType,
-                        accessibilityFeatures: place.accessibilityFeatures 
-                          ? JSON.parse(place.accessibilityFeatures)
-                          : [],
-                        photos: place.photos ? JSON.parse(place.photos) : undefined
-                      }} 
+                      place={place}
+                      showActions={true}
                     />
                     <Button
                       variant="destructive"
                       size="sm"
                       className="absolute top-2 right-2"
-                      onClick={() => handleRemoveSavedPlace(place.id!)}
+                      onClick={() => handleRemoveSavedPlace(place.id)}
                     >
                       Remove
                     </Button>

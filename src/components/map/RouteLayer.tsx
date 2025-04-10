@@ -50,10 +50,10 @@ export const RouteLayer: React.FC<RouteLayerProps> = ({
       
       // Convert waypoints to LatLng objects
       const latLngWaypoints = route.waypoints.map(waypoint => 
-        [waypoint[0], waypoint[1]]
+        [waypoint[0], waypoint[1]] as L.LatLngTuple
       );
       
-      routeLayerRef.current = L.polyline(latLngWaypoints as L.LatLngTuple[], {
+      routeLayerRef.current = L.polyline(latLngWaypoints, {
         color: routeColor,
         weight: routeWeight,
         opacity: routeOpacity,
@@ -76,8 +76,8 @@ export const RouteLayer: React.FC<RouteLayerProps> = ({
             </svg>
           </div>
         `,
-        iconSize: [24, 24],
-        iconAnchor: [12, 12]
+        iconSize: [24, 24] as L.PointExpression,
+        iconAnchor: [12, 12] as L.PointExpression
       });
 
       const startMarker = L.marker([route.waypoints[0][0], route.waypoints[0][1]], { icon: startIcon })
@@ -104,8 +104,8 @@ export const RouteLayer: React.FC<RouteLayerProps> = ({
             </svg>
           </div>
         `,
-        iconSize: [24, 24],
-        iconAnchor: [12, 12]
+        iconSize: [24, 24] as L.PointExpression,
+        iconAnchor: [12, 12] as L.PointExpression
       });
 
       const lastWaypoint = route.waypoints[route.waypoints.length - 1];
@@ -132,8 +132,8 @@ export const RouteLayer: React.FC<RouteLayerProps> = ({
                   ${index + 1}
                 </div>
               `,
-              iconSize: [18, 18],
-              iconAnchor: [9, 9]
+              iconSize: [18, 18] as L.PointExpression,
+              iconAnchor: [9, 9] as L.PointExpression
             });
             
             // Use the waypoint from the step if available, otherwise use an interpolated point
@@ -169,8 +169,8 @@ export const RouteLayer: React.FC<RouteLayerProps> = ({
                   ${step.maneuver === 'elevator' ? '🔼' : '⤴️'}
                 </div>
               `,
-              iconSize: [24, 24],
-              iconAnchor: [12, 12]
+              iconSize: [24, 24] as L.PointExpression,
+              iconAnchor: [12, 12] as L.PointExpression
             });
             
             if (step.waypoint) {

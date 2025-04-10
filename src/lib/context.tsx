@@ -180,11 +180,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     getInitialLocation();
   }, []);
 
-  // Load user preferences from database
+  // Load user preferences and saved places from database
   useEffect(() => {
-    const loadUserPreferences = async () => {
+    const loadUserData = async () => {
       if (session?.user) {
         try {
+          // Load user preferences
           const users = await fine.table("users").select().eq("id", Number(session.user.id));
           if (users && users.length > 0) {
             const user = users[0];
@@ -205,15 +206,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           if (savedPlacesData && savedPlacesData.length > 0) {
             const placeIds = savedPlacesData.map(sp => sp.placeId);
             const places = await fine.table("places").select().in("id", placeIds);
-            setSavedPlaces(places || []);
+            if (places && places.length > 0) {
+              setSavedPlaces(places);
+              console.log("Loaded saved places:", places);
+            }
           }
         } catch (error) {
-          console.error("Error loading user preferences:", error);
+          console.error("Error loading user data:", error);
         }
       }
     };
     
-    loadUserPreferences();
+    loadUserData();
   }, [session]);
 
   // Save user preferences to database
@@ -332,7 +336,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       // First check if the place exists in the database
       let placeId = place.id;
+      
       if (!placeId) {
+        // Check if a similar place already exists
         const existingPlaces = await fine.table("places").select()
           .eq("latitude", place.latitude)
           .eq("longitude", place.longitude);
@@ -341,9 +347,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           placeId = existingPlaces[0].id;
         } else {
           // Insert the new place
-          const newPlaces = await fine.table("places").insert(place).select();
+          const newPlaces = await fine.table("places").insert({
+            name: place.name,
+            address: place.address,
+            latitude: place.latitude,
+            longitude: place.longitude,
+            placeType: place.placeType,
+            accessibilityFeatures: place.accessibilityFeatures,
+            photos: place.photos,
+            osmId: place.osmId
+          }).select();
+          
           if (newPlaces && newPlaces.length > 0) {
             placeId = newPlaces[0].id;
+            
+            // Add the new place to our local state
+            setSavedPlaces(prev => [...prev, newPlaces[0]]);
           }
         }
       }
@@ -361,8 +380,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             placeId: placeId
           });
           
-          // Update local state
-          setSavedPlaces([...savedPlaces, place]);
+          // If the place isn't already in our local state, add it
+          if (!savedPlaces.some(p => p.id === placeId)) {
+            // Fetch the place details to ensure we have the complete data
+            const placeDetails = await fine.table("places").select().eq("id", placeId);
+            if (placeDetails && placeDetails.length > 0) {
+              setSavedPlaces(prev => [...prev, placeDetails[0]]);
+            }
+          }
         }
       }
     } catch (error) {

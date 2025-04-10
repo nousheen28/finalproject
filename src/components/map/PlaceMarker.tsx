@@ -41,8 +41,8 @@ export const PlaceMarker: React.FC<PlaceMarkerProps> = ({
           </svg>
         </div>
       `,
-      iconSize: [24, 24],
-      iconAnchor: [12, 24]
+      iconSize: [24, 24] as L.PointExpression,
+      iconAnchor: [12, 24] as L.PointExpression
     });
 
     // Create marker if it doesn't exist
