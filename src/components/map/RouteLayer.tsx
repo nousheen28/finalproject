@@ -50,7 +50,7 @@ export const RouteLayer: React.FC<RouteLayerProps> = ({
       
       // Convert waypoints to LatLng objects
       const latLngWaypoints = route.waypoints.map(waypoint => 
-        [waypoint[0], waypoint[1]] as L.LatLngTuple
+        L.latLng(waypoint[0], waypoint[1])
       );
       
       routeLayerRef.current = L.polyline(latLngWaypoints, {
@@ -76,11 +76,11 @@ export const RouteLayer: React.FC<RouteLayerProps> = ({
             </svg>
           </div>
         `,
-        iconSize: [24, 24] as [number, number],
-        iconAnchor: [12, 12] as [number, number]
+        iconSize: L.point(24, 24),
+        iconAnchor: L.point(12, 12)
       });
 
-      const startMarker = L.marker([route.waypoints[0][0], route.waypoints[0][1]], { icon: startIcon })
+      const startMarker = L.marker(L.latLng(route.waypoints[0][0], route.waypoints[0][1]), { icon: startIcon })
         .addTo(map);
       
       // Add tooltip to start marker
@@ -104,12 +104,12 @@ export const RouteLayer: React.FC<RouteLayerProps> = ({
             </svg>
           </div>
         `,
-        iconSize: [24, 24] as [number, number],
-        iconAnchor: [12, 12] as [number, number]
+        iconSize: L.point(24, 24),
+        iconAnchor: L.point(12, 12)
       });
 
       const lastWaypoint = route.waypoints[route.waypoints.length - 1];
-      const endMarker = L.marker([lastWaypoint[0], lastWaypoint[1]], { icon: endIcon })
+      const endMarker = L.marker(L.latLng(lastWaypoint[0], lastWaypoint[1]), { icon: endIcon })
         .addTo(map);
       
       // Add tooltip to end marker
@@ -132,13 +132,13 @@ export const RouteLayer: React.FC<RouteLayerProps> = ({
                   ${index + 1}
                 </div>
               `,
-              iconSize: [18, 18] as [number, number],
-              iconAnchor: [9, 9] as [number, number]
+              iconSize: L.point(18, 18),
+              iconAnchor: L.point(9, 9)
             });
             
             // Use the waypoint from the step if available, otherwise use an interpolated point
             if (step.waypoint) {
-              const waypointMarker = L.marker([step.waypoint[0], step.waypoint[1]], { icon: waypointIcon })
+              const waypointMarker = L.marker(L.latLng(step.waypoint[0], step.waypoint[1]), { icon: waypointIcon })
                 .addTo(map);
               
               // Add tooltip to waypoint marker
@@ -169,12 +169,12 @@ export const RouteLayer: React.FC<RouteLayerProps> = ({
                   ${step.maneuver === 'elevator' ? '🔼' : '⤴️'}
                 </div>
               `,
-              iconSize: [24, 24] as [number, number],
-              iconAnchor: [12, 12] as [number, number]
+              iconSize: L.point(24, 24),
+              iconAnchor: L.point(12, 12)
             });
             
             if (step.waypoint) {
-              const featureMarker = L.marker([step.waypoint[0], step.waypoint[1]], { icon: featureIcon })
+              const featureMarker = L.marker(L.latLng(step.waypoint[0], step.waypoint[1]), { icon: featureIcon })
                 .addTo(map);
               
               // Add tooltip to feature marker

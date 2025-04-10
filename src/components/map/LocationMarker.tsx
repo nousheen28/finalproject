@@ -20,22 +20,22 @@ export const LocationMarker: React.FC<LocationMarkerProps> = ({ map, position })
           <div class="absolute w-12 h-12 bg-blue-500 opacity-20 rounded-full -left-4 -top-4"></div>
         </div>
       `,
-      iconSize: [12, 12] as [number, number],
-      iconAnchor: [6, 6] as [number, number]
+      iconSize: L.point(12, 12),
+      iconAnchor: L.point(6, 6)
     });
 
     // Create marker if it doesn't exist
     if (!markerRef.current) {
-      markerRef.current = L.marker([position[0], position[1]], { icon: locationIcon })
+      markerRef.current = L.marker(L.latLng(position[0], position[1]), { icon: locationIcon })
         .addTo(map);
     } else {
       // Update marker position
-      markerRef.current.setLatLng([position[0], position[1]]);
+      markerRef.current.setLatLng(L.latLng(position[0], position[1]));
     }
 
     // Create or update accuracy circle
     if (!circleRef.current) {
-      circleRef.current = L.circle([position[0], position[1]], {
+      circleRef.current = L.circle(L.latLng(position[0], position[1]), {
         radius: 50, // Accuracy radius in meters
         color: '#4299e1',
         fillColor: '#4299e1',
@@ -43,7 +43,7 @@ export const LocationMarker: React.FC<LocationMarkerProps> = ({ map, position })
         weight: 1
       }).addTo(map);
     } else {
-      circleRef.current.setLatLng([position[0], position[1]]);
+      circleRef.current.setLatLng(L.latLng(position[0], position[1]));
     }
 
     // Cleanup on unmount

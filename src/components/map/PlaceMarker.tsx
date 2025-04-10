@@ -41,13 +41,13 @@ export const PlaceMarker: React.FC<PlaceMarkerProps> = ({
           </svg>
         </div>
       `,
-      iconSize: [24, 24] as [number, number],
-      iconAnchor: [12, 24] as [number, number]
+      iconSize: L.point(24, 24),
+      iconAnchor: L.point(12, 24)
     });
 
     // Create marker if it doesn't exist
     if (!markerRef.current) {
-      markerRef.current = L.marker([place.coordinates[0], place.coordinates[1]], { icon: placeIcon })
+      markerRef.current = L.marker(L.latLng(place.coordinates[0], place.coordinates[1]), { icon: placeIcon })
         .addTo(map);
       
       // Add tooltip and click handler
