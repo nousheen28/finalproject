@@ -59,7 +59,7 @@ export const MapView: React.FC<MapViewProps> = ({
     // Create map instance
     const defaultLocation = currentLocation || [13.0827, 80.2707]; // Default to Chennai if no location
     const map = L.map(mapContainerRef.current, {
-      center: L.latLng(defaultLocation[0], defaultLocation[1]),
+      center: [defaultLocation[0], defaultLocation[1]],
       zoom: 15,
       layers: [
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -76,7 +76,7 @@ export const MapView: React.FC<MapViewProps> = ({
     }
 
     // Add click handler
-    map.on('click', (e: L.LeafletMouseEvent) => {
+    map.addEventListener('click', (e: any) => {
       const { lat, lng } = e.latlng;
       
       // Clear previous temporary marker
@@ -85,7 +85,7 @@ export const MapView: React.FC<MapViewProps> = ({
       }
       
       // Create new marker
-      const newMarker = L.marker(L.latLng(lat, lng), {
+      const newMarker = L.marker([lat, lng], {
         icon: L.divIcon({
           className: 'custom-marker',
           html: `
@@ -96,8 +96,8 @@ export const MapView: React.FC<MapViewProps> = ({
               </svg>
             </div>
           `,
-          iconSize: L.point(24, 24),
-          iconAnchor: L.point(12, 24)
+          iconSize: [24, 24] as [number, number],
+          iconAnchor: [12, 24] as [number, number]
         })
       }).addTo(map);
       
@@ -128,7 +128,7 @@ export const MapView: React.FC<MapViewProps> = ({
   // Update map center when current location changes
   useEffect(() => {
     if (mapRef.current && currentLocation) {
-      mapRef.current.setView(L.latLng(currentLocation[0], currentLocation[1]), mapRef.current.getZoom());
+      mapRef.current.setView([currentLocation[0], currentLocation[1]], mapRef.current.getZoom());
     }
   }, [currentLocation]);
 
@@ -186,7 +186,7 @@ export const MapView: React.FC<MapViewProps> = ({
     
     // Auto-zoom to the selected place
     if (mapRef.current) {
-      mapRef.current.setView(L.latLng(place.coordinates[0], place.coordinates[1]), 18);
+      mapRef.current.setView([place.coordinates[0], place.coordinates[1]], 18);
     }
   };
 
@@ -207,7 +207,7 @@ export const MapView: React.FC<MapViewProps> = ({
           setCurrentLocation([latitude, longitude]);
           
           if (mapRef.current) {
-            mapRef.current.setView(L.latLng(latitude, longitude), 16);
+            mapRef.current.setView([latitude, longitude], 16);
           }
         },
         (error) => {

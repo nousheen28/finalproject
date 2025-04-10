@@ -41,13 +41,13 @@ export const PlaceMarker: React.FC<PlaceMarkerProps> = ({
           </svg>
         </div>
       `,
-      iconSize: L.point(24, 24),
-      iconAnchor: L.point(12, 24)
+      iconSize: [24, 24] as [number, number],
+      iconAnchor: [12, 24] as [number, number]
     });
 
     // Create marker if it doesn't exist
     if (!markerRef.current) {
-      markerRef.current = L.marker(L.latLng(place.coordinates[0], place.coordinates[1]), { icon: placeIcon })
+      markerRef.current = L.marker([place.coordinates[0], place.coordinates[1]], { icon: placeIcon })
         .addTo(map);
       
       // Add tooltip and click handler
@@ -64,15 +64,27 @@ export const PlaceMarker: React.FC<PlaceMarkerProps> = ({
     } else {
       // Update marker position and icon if high contrast setting changes
       const marker = markerRef.current;
-      marker.setIcon(placeIcon);
+      // Use removeFrom and addTo instead of setIcon
+      const newMarker = L.marker([place.coordinates[0], place.coordinates[1]], { icon: placeIcon });
       
-      // Update tooltip
-      marker.unbindTooltip();
-      marker.bindTooltip(place.name, { 
-        permanent: highContrast, 
-        direction: 'top',
-        className: highContrast ? 'high-contrast-tooltip' : ''
-      });
+      if (marker) {
+        marker.removeFrom(map);
+        newMarker.addTo(map);
+        
+        // Add tooltip and click handler to new marker
+        newMarker.bindTooltip(place.name, { 
+          permanent: highContrast, 
+          direction: 'top',
+          className: highContrast ? 'high-contrast-tooltip' : ''
+        });
+        
+        newMarker.on('click', () => {
+          if (onClick) onClick();
+        });
+        
+        // Update reference
+        markerRef.current = newMarker;
+      }
     }
 
     // Cleanup on unmount
