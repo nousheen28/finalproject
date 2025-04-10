@@ -59,7 +59,7 @@ export const MapView: React.FC<MapViewProps> = ({
     // Create map instance
     const defaultLocation = currentLocation || [13.0827, 80.2707]; // Default to Chennai if no location
     const map = L.map(mapContainerRef.current, {
-      center: [defaultLocation[0], defaultLocation[1]],
+      center: L.latLng(defaultLocation[0], defaultLocation[1]),
       zoom: 15,
       layers: [
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -71,7 +71,8 @@ export const MapView: React.FC<MapViewProps> = ({
 
     // Add scale control
     if (showControls) {
-      L.control.scale({ imperial: false }).addTo(map);
+      const scaleControl = L.control.scale({ imperial: false });
+      scaleControl.addTo(map);
     }
 
     // Add click handler
@@ -95,13 +96,13 @@ export const MapView: React.FC<MapViewProps> = ({
               </svg>
             </div>
           `,
-          iconSize: L.point(24, 24),
-          iconAnchor: L.point(12, 24)
+          iconSize: [24, 24],
+          iconAnchor: [12, 24]
         })
       }).addTo(map);
       
       // Add popup
-      (newMarker as any).bindPopup('Selected Location').openPopup();
+      newMarker.bindPopup('Selected Location').openPopup();
       
       // Store marker reference
       setTemporaryMarker(newMarker);

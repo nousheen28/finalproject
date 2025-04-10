@@ -41,17 +41,17 @@ export const PlaceMarker: React.FC<PlaceMarkerProps> = ({
           </svg>
         </div>
       `,
-      iconSize: L.point(24, 24),
-      iconAnchor: L.point(12, 24)
+      iconSize: [24, 24],
+      iconAnchor: [12, 24]
     });
 
     // Create marker if it doesn't exist
     if (!markerRef.current) {
-      markerRef.current = L.marker(L.latLng(place.coordinates[0], place.coordinates[1]), { icon: placeIcon })
+      markerRef.current = L.marker([place.coordinates[0], place.coordinates[1]], { icon: placeIcon })
         .addTo(map);
       
       // Add tooltip and click handler
-      const marker = markerRef.current as any;
+      const marker = markerRef.current;
       marker.bindTooltip(place.name, { 
         permanent: highContrast, 
         direction: 'top',
@@ -63,7 +63,7 @@ export const PlaceMarker: React.FC<PlaceMarkerProps> = ({
       });
     } else {
       // Update marker icon if high contrast setting changes
-      const marker = markerRef.current as any; // Use any to bypass TypeScript error
+      const marker = markerRef.current;
       marker.setIcon(placeIcon);
       
       // Update tooltip
