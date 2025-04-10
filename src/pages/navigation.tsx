@@ -9,6 +9,7 @@ import { useAppContext } from '@/lib/context';
 import { reverseGeocode, speakInstruction, vibrateDevice, vibrationPatterns } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const NavigationPage = () => {
   const { 
@@ -27,6 +28,7 @@ const NavigationPage = () => {
   const [showSteps, setShowSteps] = useState(true);
   const [startAddress, setStartAddress] = useState('');
   const [endAddress, setEndAddress] = useState('');
+  const [isLoadingAddresses, setIsLoadingAddresses] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -92,18 +94,26 @@ const NavigationPage = () => {
   useEffect(() => {
     // Get addresses for start and end points
     const getAddresses = async () => {
-      if (currentLocation) {
-        const startData = await reverseGeocode(currentLocation[0], currentLocation[1]);
+      if (!currentLocation || !destination) return;
+      
+      setIsLoadingAddresses(true);
+      try {
+        const [startData, endData] = await Promise.all([
+          reverseGeocode(currentLocation[0], currentLocation[1]),
+          reverseGeocode(destination[0], destination[1])
+        ]);
+        
         if (startData) {
           setStartAddress(startData.display_name);
         }
-      }
-      
-      if (destination) {
-        const endData = await reverseGeocode(destination[0], destination[1]);
+        
         if (endData) {
           setEndAddress(endData.display_name);
         }
+      } catch (error) {
+        console.error("Error getting addresses:", error);
+      } finally {
+        setIsLoadingAddresses(false);
       }
     };
     
@@ -199,18 +209,27 @@ const NavigationPage = () => {
         
         {/* Addresses */}
         <div className={`p-4 ${accessibilityPreferences.uiPreferences.highContrast ? 'border-b-2 border-black' : 'border-b border-border'}`}>
-          <div className="flex items-center mb-2">
-            <div className={`w-3 h-3 rounded-full ${accessibilityPreferences.uiPreferences.highContrast ? 'bg-black' : 'bg-green-500'} mr-2`}></div>
-            <p className={`${accessibilityPreferences.uiPreferences.largeText ? 'text-base' : 'text-sm'} truncate`}>
-              {startAddress || 'Current Location'}
-            </p>
-          </div>
-          <div className="flex items-center">
-            <div className={`w-3 h-3 rounded-full ${accessibilityPreferences.uiPreferences.highContrast ? 'bg-black' : 'bg-red-500'} mr-2`}></div>
-            <p className={`${accessibilityPreferences.uiPreferences.largeText ? 'text-base' : 'text-sm'} truncate`}>
-              {endAddress || 'Destination'}
-            </p>
-          </div>
+          {isLoadingAddresses ? (
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-3/4" />
+              <Skeleton className="h-4 w-full" />
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center mb-2">
+                <div className={`w-3 h-3 rounded-full ${accessibilityPreferences.uiPreferences.highContrast ? 'bg-black' : 'bg-green-500'} mr-2`}></div>
+                <p className={`${accessibilityPreferences.uiPreferences.largeText ? 'text-base' : 'text-sm'} truncate`}>
+                  {startAddress || 'Current Location'}
+                </p>
+              </div>
+              <div className="flex items-center">
+                <div className={`w-3 h-3 rounded-full ${accessibilityPreferences.uiPreferences.highContrast ? 'bg-black' : 'bg-red-500'} mr-2`}></div>
+                <p className={`${accessibilityPreferences.uiPreferences.largeText ? 'text-base' : 'text-sm'} truncate`}>
+                  {endAddress || 'Destination'}
+                </p>
+              </div>
+            </>
+          )}
         </div>
         
         {/* Navigation steps */}

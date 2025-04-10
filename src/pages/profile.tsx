@@ -17,6 +17,7 @@ import { Slider } from '@/components/ui/slider';
 import { useToast } from '@/hooks/use-toast';
 import { speakInstruction } from '@/lib/api';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const ProfilePage = () => {
   const { 
@@ -27,9 +28,10 @@ const ProfilePage = () => {
     setTransportMode,
     removeSavedPlace
   } = useAppContext();
-  const { data: session } = fine.auth.useSession();
+  const { data: session, isPending: isSessionLoading } = fine.auth.useSession();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [isLoadingSavedPlaces, setIsLoadingSavedPlaces] = useState(false);
   
   // Voice settings
   const [voiceRate, setVoiceRate] = useState(0.9);
@@ -64,6 +66,26 @@ const ProfilePage = () => {
     { value: 'cane', label: 'Using Cane' },
     { value: 'walker', label: 'Using Walker' }
   ];
+
+  // Load saved places
+  useEffect(() => {
+    const loadSavedPlaces = async () => {
+      if (session?.user) {
+        setIsLoadingSavedPlaces(true);
+        try {
+          // Saved places are already loaded in the context
+          // This is just to show loading state
+          await new Promise(resolve => setTimeout(resolve, 500));
+        } catch (error) {
+          console.error("Error loading saved places:", error);
+        } finally {
+          setIsLoadingSavedPlaces(false);
+        }
+      }
+    };
+    
+    loadSavedPlaces();
+  }, [session]);
 
   const handleDisabilityChange = (type: DisabilityType, checked: boolean) => {
     const updatedTypes = checked
@@ -337,6 +359,26 @@ const ProfilePage = () => {
   // Determine if we should use large text based on preferences
   const largeText = accessibilityPreferences.uiPreferences.largeText;
   const highContrast = accessibilityPreferences.uiPreferences.highContrast;
+
+  if (isSessionLoading) {
+    return (
+      <main className="w-full min-h-screen bg-background text-foreground pb-16">
+        <Header title="Profile" />
+        <div className="p-4">
+          <div className="flex items-center mb-6">
+            <Skeleton className="w-16 h-16 rounded-full mr-4" />
+            <div>
+              <Skeleton className="h-6 w-32 mb-2" />
+              <Skeleton className="h-4 w-48" />
+            </div>
+          </div>
+          <Skeleton className="h-10 w-full mb-4" />
+          <Skeleton className="h-64 w-full" />
+        </div>
+        <NavigationBar />
+      </main>
+    );
+  }
 
   return (
     <main className="w-full min-h-screen bg-background text-foreground pb-16">
@@ -768,7 +810,21 @@ const ProfilePage = () => {
           
           {/* Saved places tab */}
           <TabsContent value="saved">
-            {savedPlaces.length > 0 ? (
+            {isLoadingSavedPlaces ? (
+              <div className="space-y-4">
+                {[1, 2, 3].map(i => (
+                  <div key={i} className="w-full">
+                    <Skeleton className="w-full h-40 mb-2" />
+                    <Skeleton className="w-3/4 h-5 mb-1" />
+                    <Skeleton className="w-1/2 h-4 mb-2" />
+                    <div className="flex gap-2">
+                      <Skeleton className="w-20 h-6" />
+                      <Skeleton className="w-20 h-6" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : savedPlaces.length > 0 ? (
               <div className="space-y-4">
                 {savedPlaces.map((place) => (
                   <div key={place.id} className="relative">
@@ -781,7 +837,8 @@ const ProfilePage = () => {
                         placeType: place.placeType,
                         accessibilityFeatures: place.accessibilityFeatures 
                           ? JSON.parse(place.accessibilityFeatures)
-                          : []
+                          : [],
+                        photos: place.photos ? JSON.parse(place.photos) : undefined
                       }} 
                     />
                     <Button

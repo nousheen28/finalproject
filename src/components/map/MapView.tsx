@@ -7,8 +7,11 @@ import { PlaceMarker } from './PlaceMarker';
 import { LocationMarker } from './LocationMarker';
 import { RouteLayer } from './RouteLayer';
 import type { PlaceDetails } from '@/lib/api';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Filter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 
 interface MapViewProps {
   height?: string;
@@ -45,6 +48,9 @@ export const MapView: React.FC<MapViewProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [mapReady, setMapReady] = useState(false);
   const markersRef = useRef<L.Marker[]>([]);
+  const [showFilters, setShowFilters] = useState(false);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(['restaurant', 'cafe', 'shop', 'hospital']);
+  const [selectedAccessibilityFeatures, setSelectedAccessibilityFeatures] = useState<string[]>([]);
 
   // Initialize map
   useEffect(() => {
@@ -89,8 +95,8 @@ export const MapView: React.FC<MapViewProps> = ({
               </svg>
             </div>
           `,
-          iconSize: [24, 24],
-          iconAnchor: [12, 24]
+          iconSize: L.point(24, 24),
+          iconAnchor: L.point(12, 24)
         })
       }).addTo(map);
       
@@ -133,7 +139,7 @@ export const MapView: React.FC<MapViewProps> = ({
       setIsLoading(true);
       try {
         const [lat, lng] = currentLocation;
-        const placesData = await getNearbyAccessiblePlaces(lat, lng, 1000);
+        const placesData = await getNearbyAccessiblePlaces(lat, lng, 1000, selectedCategories);
         
         // Process the OSM data to extract accessibility information
         const processedPlaces = placesData
@@ -143,7 +149,13 @@ export const MapView: React.FC<MapViewProps> = ({
         // Filter places based on accessibility preferences
         const filteredPlaces = processedPlaces.filter(place => {
           // If user requires specific features, check if the place has them
-          if (accessibilityPreferences.requiredFeatures.length > 0) {
+          if (selectedAccessibilityFeatures.length > 0) {
+            return selectedAccessibilityFeatures.some(requiredFeature => 
+              place.accessibilityFeatures.some(
+                feature => feature.type === requiredFeature && feature.available
+              )
+            );
+          } else if (accessibilityPreferences.requiredFeatures.length > 0) {
             return accessibilityPreferences.requiredFeatures.some(requiredFeature => 
               place.accessibilityFeatures.some(
                 feature => feature.type === requiredFeature && feature.available
@@ -162,7 +174,7 @@ export const MapView: React.FC<MapViewProps> = ({
     };
 
     fetchNearbyPlaces();
-  }, [currentLocation, showNearbyPlaces, accessibilityPreferences.requiredFeatures]);
+  }, [currentLocation, showNearbyPlaces, accessibilityPreferences.requiredFeatures, selectedCategories, selectedAccessibilityFeatures]);
 
   // Handle place selection
   const handlePlaceClick = (place: PlaceDetails) => {
@@ -205,6 +217,24 @@ export const MapView: React.FC<MapViewProps> = ({
     }
   };
 
+  // Toggle category selection
+  const toggleCategory = (category: string) => {
+    setSelectedCategories(prev => 
+      prev.includes(category)
+        ? prev.filter(c => c !== category)
+        : [...prev, category]
+    );
+  };
+
+  // Toggle accessibility feature selection
+  const toggleAccessibilityFeature = (feature: string) => {
+    setSelectedAccessibilityFeatures(prev => 
+      prev.includes(feature)
+        ? prev.filter(f => f !== feature)
+        : [...prev, feature]
+    );
+  };
+
   // Render loading state or error message if no location
   if (!locationPermissionGranted && !currentLocation) {
     return (
@@ -232,6 +262,56 @@ export const MapView: React.FC<MapViewProps> = ({
             <span>Loading places...</span>
           </div>
         </div>
+      )}
+      
+      {/* Filter button */}
+      {showNearbyPlaces && showControls && (
+        <Button
+          variant="outline"
+          size="sm"
+          className="absolute top-4 left-4 bg-background/80 shadow-md"
+          onClick={() => setShowFilters(!showFilters)}
+        >
+          <Filter className="h-4 w-4 mr-2" />
+          Filters
+        </Button>
+      )}
+      
+      {/* Filter panel */}
+      {showFilters && (
+        <Card className="absolute top-16 left-4 w-64 p-3 bg-background/95 shadow-lg z-50 max-h-[60vh] overflow-y-auto">
+          <h3 className="font-medium mb-2">Categories</h3>
+          <div className="space-y-2 mb-4">
+            {['restaurant', 'cafe', 'shop', 'hospital', 'school', 'bank', 'pharmacy'].map((category) => (
+              <div key={category} className="flex items-center space-x-2">
+                <Checkbox 
+                  id={`category-${category}`} 
+                  checked={selectedCategories.includes(category)}
+                  onCheckedChange={() => toggleCategory(category)}
+                />
+                <Label htmlFor={`category-${category}`} className="capitalize">{category}</Label>
+              </div>
+            ))}
+          </div>
+          
+          <h3 className="font-medium mb-2">Accessibility Features</h3>
+          <div className="space-y-2">
+            {['wheelchair', 'ramp', 'elevator', 'accessible_toilet', 'braille', 'hearing_loop'].map((feature) => (
+              <div key={feature} className="flex items-center space-x-2">
+                <Checkbox 
+                  id={`feature-${feature}`} 
+                  checked={selectedAccessibilityFeatures.includes(feature)}
+                  onCheckedChange={() => toggleAccessibilityFeature(feature)}
+                />
+                <Label htmlFor={`feature-${feature}`} className="capitalize">{feature.replace('_', ' ')}</Label>
+              </div>
+            ))}
+          </div>
+          
+          <div className="mt-4 flex justify-end">
+            <Button size="sm" onClick={() => setShowFilters(false)}>Apply</Button>
+          </div>
+        </Card>
       )}
       
       {/* Render current location marker */}
@@ -293,6 +373,13 @@ export const MapView: React.FC<MapViewProps> = ({
               <circle cx="12" cy="12" r="3" />
             </svg>
           </Button>
+        </div>
+      )}
+      
+      {/* Place count indicator */}
+      {nearbyPlaces.length > 0 && (
+        <div className="absolute bottom-4 left-4 bg-background/80 px-3 py-1 rounded-full text-sm shadow-md">
+          {nearbyPlaces.length} accessible places nearby
         </div>
       )}
     </div>

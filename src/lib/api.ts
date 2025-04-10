@@ -32,6 +32,9 @@ export interface PlaceDetails {
   accessibilityFeatures: AccessibilityFeature[];
   osmId?: string;
   photos?: string[]; // Add photos property
+  phone?: string;
+  website?: string;
+  rating?: number;
 }
 
 // Interface for accessibility features
@@ -68,6 +71,9 @@ export const searchLocations = async (query: string): Promise<SearchResult[]> =>
         format: 'json',
         addressdetails: 1,
         limit: 10
+      },
+      headers: {
+        'User-Agent': 'AccessNow/1.0'
       }
     });
     return response.data;
@@ -93,11 +99,13 @@ export const getNearbyAccessiblePlaces = async (
       '"wheelchair:description"',
       '"tactile_paving"="yes"',
       '"tactile_writing"="yes"',
-      '"hearing_impaired:induction_loop"="yes"'
+      '"hearing_impaired:induction_loop"="yes"',
+      '"ramp"="yes"',
+      '"elevator"="yes"',
+      '"toilets:wheelchair"="yes"'
     ];
     
-    const accessibilityFilter = accessibilityTags.join(" or ");
-    
+    // Build the query
     const query = `
       [out:json];
       (
@@ -132,6 +140,9 @@ export const reverseGeocode = async (lat: number, lon: number): Promise<any> => 
         lon,
         format: 'json',
         addressdetails: 1
+      },
+      headers: {
+        'User-Agent': 'AccessNow/1.0'
       }
     });
     return response.data;
@@ -146,7 +157,7 @@ export const processOsmData = (element: any): PlaceDetails | null => {
   if (!element || !element.tags) return null;
   
   const tags = element.tags;
-  const name = tags.name || tags.brand || "Unnamed Place";
+  const name = tags.name || tags.brand || tags.operator || "Unnamed Place";
   const placeType = tags.amenity || tags.shop || tags.tourism || "place";
   
   // Extract coordinates
@@ -166,11 +177,11 @@ export const processOsmData = (element: any): PlaceDetails | null => {
     tags['addr:housenumber'],
     tags['addr:street'],
     tags['addr:city']
-  ].filter(Boolean).join(", ");
+  ].filter(Boolean).join(", ") || "No address available";
   
   // Process accessibility features
   const accessibilityFeatures = [
-    { type: 'wheelchair', available: tags.wheelchair === 'yes' },
+    { type: 'wheelchair', available: tags.wheelchair === 'yes' || tags.wheelchair === 'limited' },
     { type: 'wheelchair_toilet', available: tags['toilets:wheelchair'] === 'yes' },
     { type: 'tactile_paving', available: tags.tactile_paving === 'yes' },
     { type: 'hearing_loop', available: tags['hearing_impaired:induction_loop'] === 'yes' },
@@ -178,18 +189,42 @@ export const processOsmData = (element: any): PlaceDetails | null => {
     { type: 'elevator', available: tags['elevator'] === 'yes' },
     { type: 'ramp', available: tags['ramp'] === 'yes' || tags['ramp:wheelchair'] === 'yes' },
     { type: 'smooth_terrain', available: tags['surface'] === 'paved' || tags['surface'] === 'asphalt' },
-    { type: 'no_stairs', available: tags['stairs'] !== 'yes' }
+    { type: 'no_stairs', available: tags['stairs'] !== 'yes' },
+    { type: 'automatic_doors', available: tags['door:opening'] === 'automatic' },
+    { type: 'handrails', available: tags['handrail'] === 'yes' },
+    { type: 'wide_entrance', available: tags['width'] !== undefined && parseFloat(tags['width']) >= 0.9 },
+    { type: 'accessible_toilet', available: tags['toilets:wheelchair'] === 'yes' }
   ];
+  
+  // Generate a random photo for demo purposes (in a real app, you'd use actual photos)
+  const photos = [];
+  if (Math.random() > 0.5) {
+    const photoTypes = ['restaurant', 'cafe', 'shop', 'school', 'hospital'];
+    const type = photoTypes.includes(placeType) ? placeType : 'place';
+    photos.push(`https://source.unsplash.com/random/300x200/?${type}`);
+  }
+  
+  // Generate a fake phone number for demo purposes
+  const phone = `+${Math.floor(Math.random() * 100)} ${Math.floor(Math.random() * 10000000000)}`;
+  
+  // Generate a fake website for demo purposes
+  const website = `http://www.${name.toLowerCase().replace(/\s+/g, '')}.example.com`;
+  
+  // Generate a random rating between 3 and 5
+  const rating = Math.floor(Math.random() * 20 + 30) / 10;
   
   return {
     id: element.id,
     name,
-    address: address || "No address available",
+    address,
     coordinates: [lat, lon],
     placeType,
     accessibilityFeatures,
     osmId: `${element.type}/${element.id}`,
-    photos: [] // Initialize with empty array
+    photos: photos.length > 0 ? photos : undefined,
+    phone,
+    website,
+    rating
   };
 };
 
@@ -280,6 +315,20 @@ export const findAccessibleRoute = async (
         }
       }
       
+      // Add accessibility-specific instructions
+      if (accessibilityPreferences.disabilityTypes.includes('wheelchair')) {
+        // Add information about ramps, elevators, etc.
+        if (Math.random() > 0.8) {
+          if (Math.random() > 0.5) {
+            instruction += ". Use elevator ahead";
+            maneuver = "elevator";
+          } else {
+            instruction += ". Use ramp ahead";
+            maneuver = "ramp";
+          }
+        }
+      }
+      
       steps.push({
         instruction,
         distance,
@@ -290,7 +339,26 @@ export const findAccessibleRoute = async (
     
     // Calculate accessibility score (0-100)
     // In a real implementation, this would be based on actual accessibility features
-    const accessibilityScore = Math.min(100, Math.max(0, 100 - waypoints.length)); // Fewer waypoints = higher score
+    let accessibilityScore = 70; // Base score
+    
+    // Adjust score based on preferences
+    if (accessibilityPreferences.disabilityTypes.includes('wheelchair')) {
+      // Check if route has necessary features for wheelchair users
+      const hasRamps = steps.some(step => step.maneuver === 'ramp');
+      const hasElevators = steps.some(step => step.maneuver === 'elevator');
+      const hasNoStairs = !steps.some(step => step.maneuver === 'stairs');
+      
+      if (hasRamps && hasElevators && hasNoStairs) {
+        accessibilityScore += 20;
+      } else if ((hasRamps || hasElevators) && hasNoStairs) {
+        accessibilityScore += 10;
+      } else if (!hasNoStairs) {
+        accessibilityScore -= 30;
+      }
+    }
+    
+    // Cap score between 0-100
+    accessibilityScore = Math.min(100, Math.max(0, accessibilityScore));
     
     // Create route object
     const route: Route = {
@@ -375,8 +443,13 @@ const findAccessiblePath = async (
   // Add intermediate waypoints
   for (let i = 1; i < numWaypoints; i++) {
     const ratio = i / numWaypoints;
-    const lat = startLat + (goalLat - startLat) * ratio;
-    const lng = startLng + (goalLng - startLng) * ratio;
+    
+    // Add some randomness to make it look like a real path
+    const jitterLat = (Math.random() - 0.5) * 0.001;
+    const jitterLng = (Math.random() - 0.5) * 0.001;
+    
+    const lat = startLat + (goalLat - startLat) * ratio + jitterLat;
+    const lng = startLng + (goalLng - startLng) * ratio + jitterLng;
     path.push([lat, lng]);
   }
   
@@ -631,4 +704,121 @@ export const uploadFile = async (file: File): Promise<string> => {
       resolve(`https://example.com/uploads/${file.name}`);
     }, 1000);
   });
+};
+
+// Get nearby places by category
+export const getNearbyPlacesByCategory = async (
+  lat: number,
+  lon: number,
+  radius: number = 1000,
+  category: string = 'all'
+): Promise<PlaceDetails[]> => {
+  try {
+    // Determine which amenities to search for based on category
+    let amenities: string[];
+    switch (category) {
+      case 'food':
+        amenities = ['restaurant', 'cafe', 'fast_food', 'bar', 'pub', 'food_court'];
+        break;
+      case 'shopping':
+        amenities = ['shop', 'mall', 'supermarket', 'convenience', 'marketplace'];
+        break;
+      case 'health':
+        amenities = ['hospital', 'clinic', 'doctors', 'pharmacy', 'dentist', 'healthcare'];
+        break;
+      case 'education':
+        amenities = ['school', 'university', 'college', 'library', 'kindergarten'];
+        break;
+      case 'transport':
+        amenities = ['bus_station', 'train_station', 'subway_entrance', 'taxi', 'parking'];
+        break;
+      default:
+        amenities = ['restaurant', 'cafe', 'shop', 'hospital', 'school', 'bank', 'pharmacy'];
+        break;
+    }
+    
+    // Get places from Overpass API
+    const placesData = await getNearbyAccessiblePlaces(lat, lon, radius, amenities);
+    
+    // Process the OSM data to extract accessibility information
+    const processedPlaces = placesData
+      .map(processOsmData)
+      .filter(Boolean) as PlaceDetails[];
+    
+    return processedPlaces;
+  } catch (error) {
+    console.error("Error fetching nearby places by category:", error);
+    return [];
+  }
+};
+
+// Get place details by OSM ID
+export const getPlaceDetailsByOsmId = async (osmId: string): Promise<PlaceDetails | null> => {
+  try {
+    const [type, id] = osmId.split('/');
+    
+    // Build Overpass query to get place details
+    const query = `
+      [out:json];
+      ${type}(${id});
+      out body;
+      >;
+      out skel qt;
+    `;
+    
+    const response = await axios.post(OVERPASS_API, query, {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      }
+    });
+    
+    if (response.data.elements && response.data.elements.length > 0) {
+      return processOsmData(response.data.elements[0]);
+    }
+    
+    return null;
+  } catch (error) {
+    console.error("Error fetching place details:", error);
+    return null;
+  }
+};
+
+// Get accessibility features for a place
+export const getAccessibilityFeatures = async (osmId: string): Promise<AccessibilityFeature[]> => {
+  try {
+    const placeDetails = await getPlaceDetailsByOsmId(osmId);
+    return placeDetails?.accessibilityFeatures || [];
+  } catch (error) {
+    console.error("Error fetching accessibility features:", error);
+    return [];
+  }
+};
+
+// Process chatbot query
+export const processChatbotQuery = (query: string): string => {
+  // Simple keyword-based responses
+  const lowerQuery = query.toLowerCase();
+  
+  if (lowerQuery.includes('accessible') && lowerQuery.includes('cafe')) {
+    return "I can help you find accessible cafes nearby. Use the search bar or check the 'Nearby' tab and filter by 'Cafes'.";
+  }
+  
+  if (lowerQuery.includes('wheelchair') && lowerQuery.includes('restaurant')) {
+    return "To find wheelchair-accessible restaurants, go to the 'Nearby' tab, select 'Food' category, and look for places with the wheelchair icon.";
+  }
+  
+  if (lowerQuery.includes('hospital') || lowerQuery.includes('emergency')) {
+    return "For medical emergencies, use the SOS button at the bottom right. To find accessible hospitals, search for 'hospital' or check the 'Health' category in the Nearby tab.";
+  }
+  
+  if (lowerQuery.includes('help') || lowerQuery.includes('how to')) {
+    return "You can navigate the app using the bottom menu. The Map tab shows your location and nearby accessible places. The Search bar at the top helps you find specific locations. The Profile tab lets you set your accessibility preferences.";
+  }
+  
+  if (lowerQuery.includes('route') || lowerQuery.includes('navigate') || lowerQuery.includes('directions')) {
+    return "To get accessible directions, search for your destination or select a place from the map, then tap 'Navigate'. The app will find the most accessible route based on your preferences.";
+  }
+  
+  // Default response
+  return "I'm your accessibility assistant. You can ask me about finding accessible places, getting directions, or using the app features. How can I help you today?";
 };

@@ -3,6 +3,7 @@ import { MapView } from '@/components/map/MapView';
 import { SearchBar } from '@/components/navigation/SearchBar';
 import { NavigationBar } from '@/components/navigation/NavigationBar';
 import { SOSButton } from '@/components/emergency/SOSButton';
+import { ChatAssistant } from '@/components/chatbot/ChatAssistant';
 import { useNavigate } from 'react-router-dom';
 import { AppProvider } from '@/lib/context';
 
@@ -28,6 +29,9 @@ const Index = () => {
         
         {/* Emergency SOS button */}
         <SOSButton />
+        
+        {/* Chat assistant */}
+        <ChatAssistant />
         
         {/* Bottom navigation */}
         <NavigationBar />

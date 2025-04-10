@@ -1,22 +1,83 @@
-import React, { useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Header } from '@/components/navigation/Header';
 import { NavigationBar } from '@/components/navigation/NavigationBar';
 import { Button } from '@/components/ui/button';
 import { AccessibilityFeaturesList } from '@/components/places/AccessibilityFeatures';
-import { MapPin, Phone, Globe, ThumbsUp, ThumbsDown, AlertTriangle, Share2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { MapPin, Phone, Globe, ThumbsUp, ThumbsDown, AlertTriangle, Share2, ChevronLeft, ChevronRight, Star } from 'lucide-react';
 import { useAppContext } from '@/lib/context';
 import { useToast } from '@/hooks/use-toast';
+import { getPlaceDetailsByOsmId } from '@/lib/api';
 import type { PlaceDetails } from '@/lib/api';
 import { MapView } from '@/components/map/MapView';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const PlaceDetailsPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { id } = useParams();
   const { toast } = useToast();
   const { setDestination, startNavigation, addSavedPlace, savedPlaces } = useAppContext();
-  const [place, setPlace] = useState<PlaceDetails>(location.state?.place);
+  const [place, setPlace] = useState<PlaceDetails | null>(location.state?.place || null);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Fetch place details if not provided in location state
+  useEffect(() => {
+    const fetchPlaceDetails = async () => {
+      if (!place && id) {
+        setIsLoading(true);
+        try {
+          // Try to fetch by OSM ID first
+          const placeDetails = await getPlaceDetailsByOsmId(id);
+          if (placeDetails) {
+            setPlace(placeDetails);
+          } else {
+            toast({
+              title: "Error",
+              description: "Could not find place details",
+              variant: "destructive"
+            });
+            navigate('/');
+          }
+        } catch (error) {
+          console.error("Error fetching place details:", error);
+          toast({
+            title: "Error",
+            description: "Failed to load place details",
+            variant: "destructive"
+          });
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    fetchPlaceDetails();
+  }, [id, place, navigate, toast]);
+
+  if (isLoading) {
+    return (
+      <main className="w-full min-h-screen bg-background text-foreground pb-16">
+        <Header title="Details" />
+        <div className="p-4">
+          <Skeleton className="w-full h-64 mb-4" />
+          <Skeleton className="w-3/4 h-8 mb-2" />
+          <Skeleton className="w-1/2 h-4 mb-4" />
+          <Skeleton className="w-full h-4 mb-2" />
+          <Skeleton className="w-full h-4 mb-2" />
+          <Skeleton className="w-3/4 h-4 mb-4" />
+          <Skeleton className="w-full h-48 mb-4" />
+          <Skeleton className="w-full h-24 mb-4" />
+          <div className="flex gap-2">
+            <Skeleton className="flex-1 h-10" />
+            <Skeleton className="flex-1 h-10" />
+          </div>
+        </div>
+        <NavigationBar />
+      </main>
+    );
+  }
 
   if (!place) {
     // Redirect to home if no place data
@@ -142,6 +203,14 @@ const PlaceDetailsPage = () => {
               </div>
             </>
           )}
+          
+          {/* Rating badge */}
+          {place.rating && (
+            <div className="absolute top-2 left-2 bg-black/70 text-white px-2 py-1 rounded-md flex items-center">
+              <Star className="h-4 w-4 fill-yellow-400 text-yellow-400 mr-1" />
+              <span className="font-medium">{place.rating.toFixed(1)}</span>
+            </div>
+          )}
         </div>
       )}
       
@@ -167,16 +236,21 @@ const PlaceDetailsPage = () => {
             <p className="text-sm">{place.address}</p>
           </div>
           
-          {/* These would be populated with real data in a full implementation */}
-          <div className="flex items-center">
-            <Phone className="h-5 w-5 mr-3 text-muted-foreground" />
-            <p className="text-sm">+1 (555) 123-4567</p>
-          </div>
+          {place.phone && (
+            <div className="flex items-center">
+              <Phone className="h-5 w-5 mr-3 text-muted-foreground" />
+              <p className="text-sm">{place.phone}</p>
+            </div>
+          )}
           
-          <div className="flex items-center">
-            <Globe className="h-5 w-5 mr-3 text-muted-foreground" />
-            <a href="#" className="text-sm text-primary underline">www.example.com</a>
-          </div>
+          {place.website && (
+            <div className="flex items-center">
+              <Globe className="h-5 w-5 mr-3 text-muted-foreground" />
+              <a href={place.website} target="_blank" rel="noopener noreferrer" className="text-sm text-primary underline">
+                {place.website.replace(/^https?:\/\//, '').replace(/\/$/, '')}
+              </a>
+            </div>
+          )}
         </div>
         
         {/* Map view */}

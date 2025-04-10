@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { AccessibilityFeatureBadge } from './AccessibilityFeatures';
-import { Bookmark, MapPin } from 'lucide-react';
+import { Bookmark, MapPin, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAppContext } from '@/lib/context';
 import type { PlaceDetails } from '@/lib/api';
@@ -72,6 +72,12 @@ export const PlaceCard: React.FC<PlaceCardProps> = ({
               <Badge className="bg-green-500 text-white">
                 ♿ Wheelchair Accessible
               </Badge>
+            </div>
+          )}
+          {place.rating && (
+            <div className="absolute bottom-2 left-2 bg-black/70 text-white px-2 py-1 rounded-md flex items-center">
+              <Star className="h-3 w-3 fill-yellow-400 text-yellow-400 mr-1" />
+              <span className="text-sm font-medium">{place.rating.toFixed(1)}</span>
             </div>
           )}
         </div>

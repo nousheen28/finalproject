@@ -4,10 +4,11 @@ import { NavigationBar } from '@/components/navigation/NavigationBar';
 import { PlaceCard } from '@/components/places/PlaceCard';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, User, Coffee, Utensils, ShoppingBag, Building } from 'lucide-react';
+import { Loader2, User, Coffee, Utensils, ShoppingBag, Building, Stethoscope, BookOpen } from 'lucide-react';
 import { useAppContext } from '@/lib/context';
-import { getNearbyAccessiblePlaces, processOsmData } from '@/lib/api';
+import { getNearbyPlacesByCategory, calculateDistance } from '@/lib/api';
 import type { PlaceDetails } from '@/lib/api';
+import { Skeleton } from '@/components/ui/skeleton';
 
 // Extend PlaceDetails to include distance
 interface PlaceWithDistance extends PlaceDetails {
@@ -15,16 +16,17 @@ interface PlaceWithDistance extends PlaceDetails {
 }
 
 const NearbyPage = () => {
-  const { currentLocation } = useAppContext();
+  const { currentLocation, accessibilityPreferences } = useAppContext();
   const [isLoading, setIsLoading] = useState(false);
   const [places, setPlaces] = useState<PlaceWithDistance[]>([]);
   const [activeCategory, setActiveCategory] = useState('all');
   
   const categories = [
     { id: 'all', name: 'All', icon: User },
-    { id: 'restaurant', name: 'Food', icon: Utensils },
-    { id: 'cafe', name: 'Cafes', icon: Coffee },
-    { id: 'shop', name: 'Shops', icon: ShoppingBag },
+    { id: 'food', name: 'Food', icon: Utensils },
+    { id: 'shopping', name: 'Shops', icon: ShoppingBag },
+    { id: 'health', name: 'Health', icon: Stethoscope },
+    { id: 'education', name: 'Education', icon: BookOpen },
     { id: 'public', name: 'Public', icon: Building },
   ];
 
@@ -36,22 +38,11 @@ const NearbyPage = () => {
       try {
         const [lat, lng] = currentLocation;
         
-        // Get amenities based on selected category
-        const amenities = activeCategory === 'all' 
-          ? ['restaurant', 'cafe', 'shop', 'school', 'hospital', 'library', 'theatre', 'cinema']
-          : activeCategory === 'public'
-            ? ['school', 'hospital', 'library', 'theatre', 'cinema', 'townhall', 'police']
-            : [activeCategory];
-        
-        const placesData = await getNearbyAccessiblePlaces(lat, lng, 1000, amenities);
-        
-        // Process the OSM data to extract accessibility information
-        const processedPlaces = placesData
-          .map(processOsmData)
-          .filter(Boolean) as PlaceDetails[];
+        // Get places by category
+        const placesData = await getNearbyPlacesByCategory(lat, lng, 1000, activeCategory);
         
         // Calculate distance from current location
-        const placesWithDistance = processedPlaces.map(place => {
+        const placesWithDistance = placesData.map(place => {
           const distance = calculateDistance(
             currentLocation[0], 
             currentLocation[1], 
@@ -64,7 +55,18 @@ const NearbyPage = () => {
         // Sort by distance
         placesWithDistance.sort((a, b) => (a.distance || 0) - (b.distance || 0));
         
-        setPlaces(placesWithDistance);
+        // Filter by accessibility preferences if needed
+        const filteredPlaces = accessibilityPreferences.requiredFeatures.length > 0
+          ? placesWithDistance.filter(place => 
+              accessibilityPreferences.requiredFeatures.some(requiredFeature => 
+                place.accessibilityFeatures.some(
+                  feature => feature.type === requiredFeature && feature.available
+                )
+              )
+            )
+          : placesWithDistance;
+        
+        setPlaces(filteredPlaces);
       } catch (error) {
         console.error("Error fetching nearby places:", error);
       } finally {
@@ -73,23 +75,7 @@ const NearbyPage = () => {
     };
 
     fetchNearbyPlaces();
-  }, [currentLocation, activeCategory]);
-
-  // Calculate distance between two points in meters
-  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
-    const R = 6371e3; // Earth's radius in meters
-    const φ1 = lat1 * Math.PI / 180;
-    const φ2 = lat2 * Math.PI / 180;
-    const Δφ = (lat2 - lat1) * Math.PI / 180;
-    const Δλ = (lon2 - lon1) * Math.PI / 180;
-
-    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
-              Math.cos(φ1) * Math.cos(φ2) *
-              Math.sin(Δλ/2) * Math.sin(Δλ/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-
-    return R * c;
-  };
+  }, [currentLocation, activeCategory, accessibilityPreferences.requiredFeatures]);
 
   return (
     <main className="w-full min-h-screen bg-background text-foreground pb-16">
@@ -109,8 +95,18 @@ const NearbyPage = () => {
           
           <TabsContent value={activeCategory}>
             {isLoading ? (
-              <div className="flex justify-center items-center py-8">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <div className="space-y-4">
+                {[1, 2, 3].map(i => (
+                  <div key={i} className="w-full">
+                    <Skeleton className="w-full h-40 mb-2" />
+                    <Skeleton className="w-3/4 h-5 mb-1" />
+                    <Skeleton className="w-1/2 h-4 mb-2" />
+                    <div className="flex gap-2">
+                      <Skeleton className="w-20 h-6" />
+                      <Skeleton className="w-20 h-6" />
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : places.length > 0 ? (
               <div className="space-y-4">
