@@ -59,7 +59,7 @@ export const MapView: React.FC<MapViewProps> = ({
     // Create map instance
     const defaultLocation = currentLocation || [13.0827, 80.2707]; // Default to Chennai if no location
     const map = L.map(mapContainerRef.current, {
-      center: L.latLng(defaultLocation[0], defaultLocation[1]),
+      center: [defaultLocation[0], defaultLocation[1]],
       zoom: 15,
       layers: [
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -96,8 +96,8 @@ export const MapView: React.FC<MapViewProps> = ({
               </svg>
             </div>
           `,
-          iconSize: [24, 24] as L.PointExpression,
-          iconAnchor: [12, 24] as L.PointExpression
+          iconSize: [24, 24] as [number, number],
+          iconAnchor: [12, 24] as [number, number]
         })
       }).addTo(map);
       

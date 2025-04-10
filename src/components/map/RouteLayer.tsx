@@ -76,8 +76,8 @@ export const RouteLayer: React.FC<RouteLayerProps> = ({
             </svg>
           </div>
         `,
-        iconSize: [24, 24] as L.PointExpression,
-        iconAnchor: [12, 12] as L.PointExpression
+        iconSize: [24, 24] as [number, number],
+        iconAnchor: [12, 12] as [number, number]
       });
 
       const startMarker = L.marker([route.waypoints[0][0], route.waypoints[0][1]], { icon: startIcon })
@@ -104,8 +104,8 @@ export const RouteLayer: React.FC<RouteLayerProps> = ({
             </svg>
           </div>
         `,
-        iconSize: [24, 24] as L.PointExpression,
-        iconAnchor: [12, 12] as L.PointExpression
+        iconSize: [24, 24] as [number, number],
+        iconAnchor: [12, 12] as [number, number]
       });
 
       const lastWaypoint = route.waypoints[route.waypoints.length - 1];
@@ -132,8 +132,8 @@ export const RouteLayer: React.FC<RouteLayerProps> = ({
                   ${index + 1}
                 </div>
               `,
-              iconSize: [18, 18] as L.PointExpression,
-              iconAnchor: [9, 9] as L.PointExpression
+              iconSize: [18, 18] as [number, number],
+              iconAnchor: [9, 9] as [number, number]
             });
             
             // Use the waypoint from the step if available, otherwise use an interpolated point
@@ -169,8 +169,8 @@ export const RouteLayer: React.FC<RouteLayerProps> = ({
                   ${step.maneuver === 'elevator' ? '🔼' : '⤴️'}
                 </div>
               `,
-              iconSize: [24, 24] as L.PointExpression,
-              iconAnchor: [12, 12] as L.PointExpression
+              iconSize: [24, 24] as [number, number],
+              iconAnchor: [12, 12] as [number, number]
             });
             
             if (step.waypoint) {

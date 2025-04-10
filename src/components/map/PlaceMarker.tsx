@@ -41,8 +41,8 @@ export const PlaceMarker: React.FC<PlaceMarkerProps> = ({
           </svg>
         </div>
       `,
-      iconSize: [24, 24] as L.PointExpression,
-      iconAnchor: [12, 24] as L.PointExpression
+      iconSize: [24, 24] as [number, number],
+      iconAnchor: [12, 24] as [number, number]
     });
 
     // Create marker if it doesn't exist
@@ -62,7 +62,7 @@ export const PlaceMarker: React.FC<PlaceMarkerProps> = ({
         if (onClick) onClick();
       });
     } else {
-      // Update marker icon if high contrast setting changes
+      // Update marker position and icon if high contrast setting changes
       const marker = markerRef.current;
       marker.setIcon(placeIcon);
       
